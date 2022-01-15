@@ -18,10 +18,13 @@ def config_parser_fn(config_name):
     Takes the input yaml config file's name (& relative path). Returns all the extracted data
     :param config_name: file name (& relative path) for the YAML config file
     :returns:
-        - db_name: string denoting database name (initial support only for mariadb)
+        - db_server: string denoting database server (initial support only for mariadb)
+        - db_name: name of the database you need to pull from
         - entity_node_sql_queries: list of sql queries used to define entity nodes
-        - edge_entity_entity_sql_queries: list of sql queries to define edges of type entity nodes to entity nodes
-        - edge_entity_feature_values_sql_queries: list of sql queries to define edges of type entity node to feature values
+        - edge_entity_entity_sql_queries: list of sql queries to define edges of type entity nodes to entity nodes 
+            & the names of edges
+        - edge_entity_feature_values_sql_queries: list of sql queries to define edges of type entity node to feature 
+            values & also the names of edges
     """
     input_cfg = None
     input_config_path = Path(config_name).absolute()
@@ -32,17 +35,26 @@ def config_parser_fn(config_name):
     with hydra.initialize_config_dir(config_dir=config_dir.__str__()):
         input_cfg = hydra.compose(config_name=config_name)
 
-    # db_name used to distinguish between different databases
-    db_name = None
-    if "db_type" in input_cfg.keys():
-        db_name = input_cfg["db_type"]
-        # print(db_name)
+    # db_server used to distinguish between different databases
+    db_server = None
+    if "db_server" in input_cfg.keys():
+        db_server = input_cfg["db_server"]
+        # print(db_server)
     else:
-        print("ERROR: db_type is not defined")
+        print("ERROR: db_server is not defined")
         exit(1)
 
+    # db_name is the name of the database to pull the data from
+    db_name = None
+    if "db_server" in input_cfg.keys():
+        db_name = input_cfg["db_name"]
+        # print(db_name)
+    else:
+        print("ERROR: db_name is not defined")
+        exit(1)
+    
     # Getting all the entity nodes sql queries in a list
-    entity_node_sql_queries = None
+    entity_node_sql_queries = list()
     if "entity_node_queries" in input_cfg.keys():
         query_filepath = input_cfg["entity_node_queries"]
         file = open(query_filepath, 'r')
@@ -57,36 +69,51 @@ def config_parser_fn(config_name):
         exit(1)
 
     # Getting all edge queries for edge type entity node to entity node
-    edge_entity_entity_sql_queries = None
+    edge_entity_entity_sql_queries = list()
+    edge_entity_entity_rel_list = list()
     if "edges_entity_entity_queries" in input_cfg.keys():
         query_filepath = input_cfg["edges_entity_entity_queries"]
         file = open(query_filepath, 'r')
-        edge_entity_entity_sql_queries = file.readlines()
-        for i in range(len(edge_entity_entity_sql_queries)):
+        # edge_entity_entity_sql_queries = file.readlines()
+        read_lines = file.readlines()
+        for i in range(len(read_lines)):
             # Removing the last '\n' character
-            if (edge_entity_entity_sql_queries[i][-1] == '\n'):
-                edge_entity_entity_sql_queries[i] = edge_entity_entity_sql_queries[i][:-1]
+            if (read_lines[i][-1] == '\n'):
+                read_lines[i] = read_lines[i][:-1]
+            
+            # Adding the line to rel_list if even else its a query
+            if (i % 2 == 0):
+                edge_entity_entity_rel_list.append(read_lines[i])
+            else:
+                edge_entity_entity_sql_queries.append(read_lines[i])
         # print(edge_entity_entity_sql_queries)
     else:
         print("ERROR: edges_entity_entity_queries is not defined")
         exit(1)
 
     # Gettting all edge queries for edge type entity node to feature values
-    edge_entity_feature_values_sql_queries = None
+    edge_entity_feature_values_sql_queries = list()
+    edge_entity_feature_values_rel_list = list()
     if "edges_entity_feature_values_queries" in input_cfg.keys():
         query_filepath = input_cfg["edges_entity_feature_values_queries"]
         file = open(query_filepath, 'r')
-        edge_entity_feature_values_sql_queries = file.readlines()
-        for i in range(len(edge_entity_feature_values_sql_queries)):
+        read_lines = file.readlines()
+        for i in range(len(read_lines)):
             # Removing the last '\n' character
-            if (edge_entity_feature_values_sql_queries[i][-1] == '\n'):
-                edge_entity_feature_values_sql_queries[i] = edge_entity_feature_values_sql_queries[i][:-1]
+            if (read_lines[i][-1] == '\n'):
+                read_lines[i] = read_lines[i][:-1]
+            
+            # Adding the line to rel_list if even else its a query
+            if (i % 2 == 0):
+                edge_entity_feature_values_rel_list.append(read_lines[i])
+            else:
+                edge_entity_feature_values_sql_queries.append(read_lines[i])
         # print(edge_entity_feature_values_sql_queries)
     else:
         print("ERROR: edges_entity_feature_values_queries is not defined")
         exit(1)
 
-    return db_name, entity_node_sql_queries, edge_entity_entity_sql_queries, edge_entity_feature_values_sql_queries
+    return db_server, db_name, entity_node_sql_queries, edge_entity_entity_sql_queries, edge_entity_entity_rel_list, edge_entity_feature_values_sql_queries, edge_entity_feature_values_rel_list
 
 def clean_token(token):
     token = str(token)
@@ -187,21 +214,28 @@ def post_processing(cursor, queries_list, rel_list, entity_mapping):
 
 def main():
     ret_data = config_parser_fn("conf/config.yaml")
-    db_name = ret_data[0]
-    entity_queries_list = ret_data[1]
-    edge_entity_entity_queries_list = ret_data[2]
-    edge_entity_feature_val_queries_list = ret_data[3]
+    db_server = ret_data[0]
+    db_name = ret_data[1]
+    entity_queries_list = ret_data[2]
+    edge_entity_entity_queries_list = ret_data[3]
+    edge_entity_entity_rel_list = ret_data[4]
+    edge_entity_feature_val_queries_list = ret_data[5]
+    edge_entity_feature_val_rel_list = ret_data[6]
+    
+    # print(db_server)
     # print(db_name)
-    # print(entity_queries)
-    # print(edge_entity_entity_queries)
-    # print(edge_entity_feature_val_queries)
+    # print(entity_queries_list)
+    # print(edge_entity_entity_queries_list)
+    # print(edge_entity_entity_rel_list)
+    # print(edge_entity_feature_val_queries_list)
+    # print(edge_entity_feature_val_rel_list)
 
-    if db_name == 'maria-db':
+    if db_server == 'maria-db':
         try:
             cnx = mysql.connector.connect(user='root',
-                                        password='',  # change password to your own
+                                        password='mohil123',  # change password to your own
                                         host='127.0.0.1',
-                                        database='pbdb_culled')  # change to correct database name if necessary
+                                        database=db_name)
             cursor = cnx.cursor()
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
@@ -234,7 +268,7 @@ def main():
     #                          "WHERE occurrences.collection_no = collections.collection_no;")
     #
     # queries_lsit = [taxon_to_country_query, taxon_to_state_query, taxon_to_county_query]
-    rel_list = ["collected_from", "collected_from", "collected_from"]
+    rel_list = edge_entity_entity_rel_list
 
     src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, rel_list, entity_mapping)  # this is the pd dataframe
     # convert_to_int() should be next, but we are relying on the Marius' preprocessing module

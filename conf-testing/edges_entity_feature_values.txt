@@ -1,0 +1,6 @@
+has_title
+SELECT artid, title FROM Article;
+has_numpages
+SELECT artid, numpages FROM Article;
+total_papers
+SELECT Conference.confid, SUM(Article.artid) as Total_Papers FROM Conference, Article WHERE Conference.confid = Article.confid GROUP BY Conference.confid;

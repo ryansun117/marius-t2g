@@ -1,0 +1,8 @@
+published_in
+SELECT Article.artid, Conference.confid FROM Article, Conference WHERE Article.confid = Conference.confid;
+is_an_author
+SELECT Person.pid, Article.artid FROM Article, Person, Author WHERE Article.artid = Author.artid AND Author.pid = Person.pid;
+has_affiliation
+SELECT Person.pid, Person.affiliation FROM Person;
+has_affiliation
+SELECT Person.pid, Person.affiliation,  FROM Person;

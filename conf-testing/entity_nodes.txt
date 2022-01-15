@@ -1,0 +1,5 @@
+SELECT artid FROM Article;
+SELECT config FROM Conference;
+SELECT pid FROM Person;
+SELECT DISTINCT afflication FROM Person;
+SELECT DISTINCT alma_mater FROM Person;

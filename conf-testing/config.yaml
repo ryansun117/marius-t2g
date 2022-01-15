@@ -1,0 +1,5 @@
+db_server: maria-db
+db_name: pbdb_culled
+entity_node_queries: conf-testing/entity_nodes.txt
+edges_entity_entity_queries: conf-testing/edges_entity_entity.txt
+edges_entity_feature_values_queries: conf-testing/edges_entity_feature_values.txt
