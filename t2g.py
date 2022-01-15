@@ -149,16 +149,22 @@ def clean_token(token):
     token = token.strip().strip("\t.\'\" ")
     return token.lower()
 
-def entity_node_to_uuids(cursor, entity_queries_lsit):
+def get_uuid(val):
+    # return uuid.uuid5(uuid.NAMESPACE_DNS, str(val))
+    return val
+
+# TODO: Why do we lower case things before processing?
+def entity_node_to_uuids(cursor, entity_queries_list):
     """
     Takes entity node queries as inputs, execute the queries, store the results in temp dataframes,
-    then concatenate each entity node with its respective table name, convert each into uuid, and store the mapping in dictionary
+    then concatenate each entity node with its respective table name & column name, 
+    convert each into uuid, and store the mapping in dictionary
+    Assumption: Entries are case insentitive, i.e. BOB and bob are considered as duplicates
     """
     entity_mapping = pd.DataFrame()
 
-    for i in range(len(entity_queries_lsit)):
-        entity_query = entity_queries_lsit[i]
-        table_name = entity_query.split()[-1].rsplit(';')[0]  # table name of the query to execute
+    for i in range(len(entity_queries_list)):
+        entity_query = entity_queries_list[i]
 
         # Executing Part
         cursor.execute(entity_query)
@@ -166,74 +172,116 @@ def entity_node_to_uuids(cursor, entity_queries_lsit):
         result.columns = cursor.column_names
         #print(f'result\n{result}')
 
+        # extracting table and column names
+        table_name = entity_query.split()[-1].rsplit(';')[0]  # table name of the query to execute
+        col_name = str(result.columns[0]) # column name of the query
+
+        result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)] # cleaning invalid entries
+
         # concatenate each entity node with its respective table nam
-        result[result.columns[0]] = table_name + '_' + result[result.columns[0]].map(str)
-        print(f'result\n{result}')
+        result[result.columns[0]] = table_name + '_' + col_name + '_' + result[result.columns[0]].map(str)
+        # print(f'result\n{result}')
 
         result['uuid'] = ''
         result.columns = ['entity_node', 'uuid']
 
+        result['entity_node'] = result['entity_node'].str.lower() # entries in lower case
+        result = result.drop_duplicates() # removing duplicates
+
         # convert each entity node to uuid
         for index, row in result.iterrows():
-            result.at[index, 'entity_node'] = result.at[index, 'entity_node'].lower()
-            result.at[index, 'uuid'] = uuid.uuid5(uuid.NAMESPACE_DNS, str(result.at[index, result.columns[0]]))
+            result.at[index, 'uuid'] = get_uuid(result.at[index, result.columns[0]])
 
         entity_mapping = pd.concat([entity_mapping, result])
     return entity_mapping.set_index('entity_node').to_dict()['uuid']
 
 # Clean-up and Output
-def post_processing(cursor, queries_list, rel_list, entity_mapping):
+def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
+    edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping):
     """
     Executes the given queries_list one by one, cleanses the data by removing duplicates,
     then replace the entity nodes with their respective UUIDs, and store the final result in a dataframe/.txt file
     """
-    if (len(queries_list) != len(rel_list)):
+    if (len(edge_entity_entity_queries_list) != len(edge_entity_entity_rel_list)):
+        print("wrong list")
+        exit(1)
+    
+    if (len(edge_entity_feature_val_queries_list) != len(edge_entity_feature_val_rel_list)):
         print("wrong list")
         exit(1)
 
     src_rel_dst = pd.DataFrame()
 
-    for i in range(len(queries_list)):
-        query = queries_list[i]
-        # Executing Part
+    # These are just for metrics
+    num_uniq = []  # number of entities
+    num_edge_type = []  # number of edges
+
+    # edges from entity node to entity node processing
+    for i in range(len(edge_entity_entity_queries_list)):
+        query = edge_entity_entity_queries_list[i]
         cursor.execute(query)
-        #print(cursor)
         result = pd.DataFrame(cursor)
-        #print(result)
         result.columns = cursor.column_names
-        #print(f'result\n{result}')
+
+        # TODO: Table Name splitting needs to be more robust - right now we are assuming that position 1 and 2
+        # will always be src and dst. Is that a correct assumption in our paradigm think?
+        table_name_list = re.split(' ', query)  # table name of the query to execute
+        table_name1 = table_name_list[1].split('.')[0] # src table
+        table_name2 = table_name_list[2].split('.')[0] # dst/target table
 
         # Cleaning Part
-        num_uniq = []  # number of entities
-        num_edge_type = []  # number of edges
-
-        result = result.applymap(clean_token)  # strip tokens
+        result = result.applymap(clean_token)  # strip tokens and lower case strings
         result = result[~result.iloc[:, 1].isin(INVALID_ENTRY_LIST)]  # clean invalid data
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)]
         result = result.drop_duplicates()  # remove invalid row
-        result.iloc[:, 0] = result.iloc[:, 0] + "_" + result.columns[0]  # src
-        result.iloc[:, 1] = result.iloc[:, 1] + "_" + result.columns[1]  # tag/dst
-        result.insert(1, "rel", rel_list[i])  # rel
+
+        result.iloc[:, 0] = table_name1 + "_" + result.columns[0] + '_' + result.iloc[:, 0]   # src
+        result.iloc[:, 1] = table_name2 + "_" + result.columns[1] + '_' + result.iloc[:, 1] # dst/target
+        result.insert(1, "rel", edge_entity_entity_rel_list[i])  # rel
         result.columns = ["src", "rel", "dst"]
         num_uniq.append(len(result.iloc[:, 2].unique()))
         num_edge_type.append(result.shape[0])
-        print(f'result\n{result}')
-
-        table_name_list = re.split(' ', query)  # table name of the query to execute
-        table_name1 = table_name_list[1].split('.')[0]
-        table_name2 = table_name_list[2].split('.')[0]
-        # print(table_name1)
-        # print(table_name2)
+        # print(f'result\n{result}')
 
         # convert entity nodes to respective UUIDs
         for index, row in result.iterrows():
-            # changes '24773_taxonNo' to 'occurrences_24773' to make converting to uuid simpler
-            result.at[index, 'src'] = table_name1 + '_' + result.at[index, 'src'].split('_')[0]
-            result.at[index, 'dst'] = table_name2 + '_' + result.at[index, 'dst'].split('_')[0]
-
             # gets the UUID for the specific entity node from the entity_mapping
             result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
             result.at[index, 'dst'] = entity_mapping.get(result.at[index, 'dst'])
+
+        src_rel_dst = pd.concat([src_rel_dst, result])
+    
+    # edges from entity node to feature values processing
+    # Note: feature values will not have table_name and col_name appended
+    # TODO: Test Feature values part of post processing
+    for i in range(len(edge_entity_feature_val_queries_list)):
+        query = edge_entity_feature_val_queries_list[i]
+        cursor.execute(query)
+        result = pd.DataFrame(cursor)
+        result.columns = cursor.column_names
+
+        # TODO: Table Name splitting needs to be more robust - right now we are assuming that position 1 and 2
+        # will always be src and dst. Is that a correct assumption in our paradigm think?
+        table_name_list = re.split(' ', query)  # table name of the query to execute
+        table_name1 = table_name_list[1].split('.')[0] # src table
+
+        # Cleaning Part
+        result = result.applymap(clean_token)  # strip tokens and lower case strings
+        result = result[~result.iloc[:, 1].isin(INVALID_ENTRY_LIST)]  # clean invalid data
+        result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)]
+        result = result.drop_duplicates()  # remove invalid row
+
+        result.iloc[:, 0] = table_name1 + "_" + result.columns[0] + '_' + result.iloc[:, 0]   # src
+        result.insert(1, "rel", edge_entity_feature_val_rel_list[i])  # rel
+        result.columns = ["src", "rel", "dst"]
+        num_uniq.append(len(result.iloc[:, 2].unique()))
+        num_edge_type.append(result.shape[0])
+        # print(f'result\n{result}')
+
+        # convert entity nodes to respective UUIDs
+        for index, row in result.iterrows():
+            # gets the UUID for the specific entity node from the entity_mapping
+            result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
 
         src_rel_dst = pd.concat([src_rel_dst, result])
 
@@ -253,31 +301,9 @@ def main():
 
     # returning both cnx & cursor because cnx is main object deleting it leads to lose of cursor
     cnx, cursor = connect_to_db(db_server, db_name) 
-
-    # ENTITY NODES TO UUIDS
-    # taxon_entity_query = ('SELECT distinct taxon_no FROM occurrences;')
-    # country_entity_query = ('SELECT distinct country FROM collections;')
-    # state_entity_query = ('SELECT distinct state FROM collections;')
-    # county_entity_query = ('SELECT distinct county FROM collections;')
-    # entity_queries_lsit = [taxon_entity_query, country_entity_query, state_entity_query, county_entity_query]
     entity_mapping = entity_node_to_uuids(cursor, entity_queries_list)
-    #print(entity_mapping)
-
-    # POST_PROCESSING
-    # taxon_to_country_query = ("SELECT occurrences.taxon_no, collections.country " +
-    #                           "FROM occurrences, collections " +
-    #                           "WHERE occurrences.collection_no = collections.collection_no;")
-    # taxon_to_state_query = ("SELECT occurrences.taxon_no, collections.state " +
-    #                         "FROM occurrences, collections " +
-    #                         "WHERE occurrences.collection_no = collections.collection_no;")
-    # taxon_to_county_query = ("SELECT occurrences.taxon_no, collections.county " +
-    #                          "FROM occurrences, collections " +
-    #                          "WHERE occurrences.collection_no = collections.collection_no;")
-    #
-    # queries_lsit = [taxon_to_country_query, taxon_to_state_query, taxon_to_county_query]
-    rel_list = edge_entity_entity_rel_list
-
-    src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, rel_list, entity_mapping)  # this is the pd dataframe
+    src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
+        edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping)  # this is the pd dataframe
     # convert_to_int() should be next, but we are relying on the Marius' preprocessing module
 
 if __name__ == "__main__":
