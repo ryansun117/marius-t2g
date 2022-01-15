@@ -1,0 +1,4 @@
+db_type: maria-db
+entity_node_queries: conf/entity_nodes.txt
+edges_entity_entity_queries: conf/edges_entity_entity.txt
+edges_entity_feature_values_queries: conf/edges_entity_feature_values.txt

@@ -1,0 +1,3 @@
+SELECT occurrences.taxon_no, collections.country FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
