@@ -115,6 +115,35 @@ def config_parser_fn(config_name):
 
     return db_server, db_name, entity_node_sql_queries, edge_entity_entity_sql_queries, edge_entity_entity_rel_list, edge_entity_feature_values_sql_queries, edge_entity_feature_values_rel_list
 
+def connect_to_db(db_server, db_name):
+    """
+    Function takes db_server and db_name as the input. Tries to connect to the database and returns an object
+    which can be used to execute queries.
+    Assumption: default user: root, host: 127.0.0.1 and password:"". You will need to change code if otherwise
+    :param db_server: The name of the backend database application used for accessing data
+    :param db_name: The name of the database where the data resides
+    :return cursor: Object that can be used to execute the database queries
+    """
+    if db_server == 'maria-db':
+        try:
+            cnx = mysql.connector.connect(user='root',
+                                        password='mohil123',  # change password to your own
+                                        host='127.0.0.1',
+                                        database=db_name)
+            cursor = cnx.cursor()
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                print("Incorrect user name or password")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                print("Non-existing database")
+            else:
+                print(err)
+    else:
+        print('Other databases are currently not supported.')
+    
+    return cnx, cursor
+
+
 def clean_token(token):
     token = str(token)
     token = token.strip().strip("\t.\'\" ")
@@ -221,31 +250,9 @@ def main():
     edge_entity_entity_rel_list = ret_data[4]
     edge_entity_feature_val_queries_list = ret_data[5]
     edge_entity_feature_val_rel_list = ret_data[6]
-    
-    # print(db_server)
-    # print(db_name)
-    # print(entity_queries_list)
-    # print(edge_entity_entity_queries_list)
-    # print(edge_entity_entity_rel_list)
-    # print(edge_entity_feature_val_queries_list)
-    # print(edge_entity_feature_val_rel_list)
 
-    if db_server == 'maria-db':
-        try:
-            cnx = mysql.connector.connect(user='root',
-                                        password='mohil123',  # change password to your own
-                                        host='127.0.0.1',
-                                        database=db_name)
-            cursor = cnx.cursor()
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("Incorrect user name or password")
-            elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print("Non-existing database")
-            else:
-                print(err)
-    else:
-        print('Other databases are currently not supported.')
+    # returning both cnx & cursor because cnx is main object deleting it leads to lose of cursor
+    cnx, cursor = connect_to_db(db_server, db_name) 
 
     # ENTITY NODES TO UUIDS
     # taxon_entity_query = ('SELECT distinct taxon_no FROM occurrences;')
