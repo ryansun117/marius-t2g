@@ -143,6 +143,121 @@ def connect_to_db(db_server, db_name):
     
     return cnx, cursor
 
+# Validation check code
+def validation_check_entity_queries(entity_query_list):
+    """
+    This function is responsible for ensuring that entity queries are correctly formatted.
+    :param entity_query_list: List of entity queries and each will be checked and validated
+    :return new_query_list: List of new queries with necessary updates
+    """
+    # Format: SELECT DISTINCT table_name.col_name FROM ____ WHERE ____;
+    new_query_list = list()
+    for q in range(len(entity_query_list)):
+        qry_split = entity_query_list[q].split(' ')
+        
+        check_var = qry_split[0].lower() # To ensure no case sensitivity issues
+        if (check_var != "select"):
+            print("Error: Incorrect entity query formatting, not starting with SELECT")
+            exit(1)
+        
+        check_var = qry_split[1].lower()
+        if (check_var != "distinct"):
+            print("Adding distinct to the entity query " + str(q) +" (0 indexed position)")
+            qry_split.insert(1,"distinct")
+        
+        check_split = qry_split[2].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect entity query formatting, table_name.col_name should in the SELECT line")
+            exit(1) 
+        
+        check_var = qry_split[3].lower()
+        if (check_var != "from"):
+            print("Error: Incorrect entity query formatting, FROM not at correct position")
+            exit(1)
+        
+        # # We have rigid stop at table name because we are using this structure to extract table name
+        # # Update: Table name extraction logic updated so no longer need this check 
+        # if (qry_split[4][-1] != ";"):
+        #     print("Error: Incorrect entity query formatting, there should be nothing after table name")
+        #     exit(1)
+        
+        new_query_list.append(' '.join(qry_split))
+    
+    return new_query_list
+
+def validation_check_edge_entity_entity_queries(edge_entity_entity_queries_list):
+    """
+    Responsible for checking that the edge_entity_entiy_queries are in correct format
+    :param edge_entity_entity_queries_list: List of all the queries defining edges from entity node to entity node
+    :return new_query_list: These are updated queries with necessary changes if any
+    """
+    # Format: SELECT table1_name.col1_name, table2_name.col2_name FROM ____ WHERE ____ (and so on);
+    new_query_list = list()
+    for q in range(len(edge_entity_entity_queries_list)):
+        qry_split = edge_entity_entity_queries_list[q].split(' ')
+        
+        check_var = qry_split[0].lower()
+        if (check_var != "select"):
+            print("Error: Incorrect edge entity node - entity node formatting, " +
+                "not starting with SELECT")
+            exit(1)
+        
+        check_split = qry_split[1].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect edge entity node - entity node formatting, " +
+                "table1_name.col1_name not correctly formatted")
+            exit(1)
+        if (check_split[1][-1] != ','):
+            print("Error: Incorrect edge entity node - entity node formatting, " +
+                "missing ',' at the end of table1_name.col1_name")
+            exit(1)
+        
+        check_split = qry_split[2].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect edge entity node - entity node formatting, " +
+                "table2_name.col2_name not correctly formatted")
+            exit(1)
+        
+        check_var = qry_split[3].lower()
+        if (check_var != "from"):
+            print("Error: Incorrect edge entity node - entity node formatting, " +
+                "extra elements after table2_name.col2_name")
+            exit(1)
+        
+        new_query_list.append(edge_entity_entity_queries_list[q])
+    
+    return new_query_list
+
+def validation_check_edge_entity_feature_val_queries(edge_entity_feature_val_queries_list):
+    """
+    Responsible for checking that the edge_entity_feature_val_queries_list are in correct format
+    :param edge_entity_feature_val_queries_list: List of all the queries defining edges from entity node to feature values
+    :return new_query_list: These are updated queries with necessary changes if any
+    """
+    # Format: SELECT table1_name.col1_name, ____ FROM ____ WHERE ____ (and so on);
+    new_query_list = list()
+    for q in range(len(edge_entity_feature_val_queries_list)):
+        qry_split = edge_entity_feature_val_queries_list[q].split(' ')
+        
+        check_var = qry_split[0].lower()
+        if (check_var != "select"):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "not starting with SELECT")
+            exit(1)
+        
+        check_split = qry_split[1].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "table1_name.col1_name not correctly formatted")
+            exit(1)
+        if (check_split[1][-1] != ','):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "missing ',' at the end of table1_name.col1_name")
+            exit(1)
+        
+        new_query_list.append(edge_entity_feature_val_queries_list[q])
+    
+    return new_query_list
 
 def clean_token(token):
     token = str(token)
@@ -173,8 +288,9 @@ def entity_node_to_uuids(cursor, entity_queries_list):
         #print(f'result\n{result}')
 
         # extracting table and column names
-        table_name = entity_query.split()[-1].rsplit(';')[0]  # table name of the query to execute
-        col_name = str(result.columns[0]) # column name of the query
+        # TODO: Improve table name extraction logic to better formatting
+        table_name = entity_query.split()[2].split('.')[0]  # table name of the query to execute
+        col_name = str(entity_query.split()[2].split('.')[1]) # column name of the query
 
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)] # cleaning invalid entries
 
@@ -227,7 +343,9 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
         # will always be src and dst. Is that a correct assumption in our paradigm think?
         table_name_list = re.split(' ', query)  # table name of the query to execute
         table_name1 = table_name_list[1].split('.')[0] # src table
+        col_name1 = table_name_list[1].split('.')[1][:-1] # src column, (note last character ',' is removed)
         table_name2 = table_name_list[2].split('.')[0] # dst/target table
+        col_name2 = table_name_list[2].split('.')[1] # dst/target column
 
         # Cleaning Part
         result = result.applymap(clean_token)  # strip tokens and lower case strings
@@ -235,8 +353,8 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)]
         result = result.drop_duplicates()  # remove invalid row
 
-        result.iloc[:, 0] = table_name1 + "_" + result.columns[0] + '_' + result.iloc[:, 0]   # src
-        result.iloc[:, 1] = table_name2 + "_" + result.columns[1] + '_' + result.iloc[:, 1] # dst/target
+        result.iloc[:, 0] = table_name1 + "_" + col_name1 + '_' + result.iloc[:, 0]   # src
+        result.iloc[:, 1] = table_name2 + "_" + col_name2 + '_' + result.iloc[:, 1] # dst/target
         result.insert(1, "rel", edge_entity_entity_rel_list[i])  # rel
         result.columns = ["src", "rel", "dst"]
         num_uniq.append(len(result.iloc[:, 2].unique()))
@@ -264,6 +382,7 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
         # will always be src and dst. Is that a correct assumption in our paradigm think?
         table_name_list = re.split(' ', query)  # table name of the query to execute
         table_name1 = table_name_list[1].split('.')[0] # src table
+        col_name1 = table_name_list[1].split('.')[1][:-1] # src column, (note last character ',' is removed)
 
         # Cleaning Part
         result = result.applymap(clean_token)  # strip tokens and lower case strings
@@ -271,7 +390,7 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)]
         result = result.drop_duplicates()  # remove invalid row
 
-        result.iloc[:, 0] = table_name1 + "_" + result.columns[0] + '_' + result.iloc[:, 0]   # src
+        result.iloc[:, 0] = table_name1 + "_" + col_name1 + '_' + result.iloc[:, 0]   # src
         result.insert(1, "rel", edge_entity_feature_val_rel_list[i])  # rel
         result.columns = ["src", "rel", "dst"]
         num_uniq.append(len(result.iloc[:, 2].unique()))
@@ -300,7 +419,10 @@ def main():
     edge_entity_feature_val_rel_list = ret_data[6]
 
     # returning both cnx & cursor because cnx is main object deleting it leads to lose of cursor
-    cnx, cursor = connect_to_db(db_server, db_name) 
+    cnx, cursor = connect_to_db(db_server, db_name)
+    entity_queries_list = validation_check_entity_queries(entity_queries_list)
+    edge_entity_entity_queries_list = validation_check_edge_entity_entity_queries(edge_entity_entity_queries_list)
+    edge_entity_feature_val_queries_list = validation_check_edge_entity_feature_val_queries(edge_entity_feature_val_queries_list)
     entity_mapping = entity_node_to_uuids(cursor, entity_queries_list)
     src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
         edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping)  # this is the pd dataframe
