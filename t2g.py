@@ -228,6 +228,37 @@ def validation_check_edge_entity_entity_queries(edge_entity_entity_queries_list)
     
     return new_query_list
 
+def validation_check_edge_entity_feature_val_queries(edge_entity_feature_val_queries_list):
+    """
+    Responsible for checking that the edge_entity_feature_val_queries_list are in correct format
+    :param edge_entity_feature_val_queries_list: List of all the queries defining edges from entity node to feature values
+    :return new_query_list: These are updated queries with necessary changes if any
+    """
+    # Format: SELECT table1_name.col1_name, ____ FROM ____ WHERE ____ (and so on);
+    new_query_list = list()
+    for q in range(len(edge_entity_feature_val_queries_list)):
+        qry_split = edge_entity_feature_val_queries_list[q].split(' ')
+        
+        check_var = qry_split[0].lower()
+        if (check_var != "select"):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "not starting with SELECT")
+            exit(1)
+        
+        check_split = qry_split[1].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "table1_name.col1_name not correctly formatted")
+            exit(1)
+        if (check_split[1][-1] != ','):
+            print("Error: Incorrect edge entity node - feature value formatting, " +
+                "missing ',' at the end of table1_name.col1_name")
+            exit(1)
+        
+        new_query_list.append(edge_entity_feature_val_queries_list[q])
+    
+    return new_query_list
+
 def clean_token(token):
     token = str(token)
     token = token.strip().strip("\t.\'\" ")
@@ -391,6 +422,7 @@ def main():
     cnx, cursor = connect_to_db(db_server, db_name)
     entity_queries_list = validation_check_entity_queries(entity_queries_list)
     edge_entity_entity_queries_list = validation_check_edge_entity_entity_queries(edge_entity_entity_queries_list)
+    edge_entity_feature_val_queries_list = validation_check_edge_entity_feature_val_queries(edge_entity_feature_val_queries_list)
     entity_mapping = entity_node_to_uuids(cursor, entity_queries_list)
     src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
         edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping)  # this is the pd dataframe
