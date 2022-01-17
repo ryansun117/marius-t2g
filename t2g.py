@@ -143,6 +143,41 @@ def connect_to_db(db_server, db_name):
     
     return cnx, cursor
 
+# Validation check code
+def validation_check_entity_queries(entity_query_list):
+    """
+    This function is responsible for ensuring that entity queries are correctly formatted.
+    :param entity_query_list: List of entity queries and each will be checked and validated
+    :return updated_queries: List of new queries with necessary updates
+    """
+    # Assuming formating as SELECT DISTINCT ____ FROM ____;
+    new_query_list = list()
+    for q in range(len(entity_query_list)):
+        qry_split = entity_query_list[q].split(' ')
+        for i in range(len(qry_split)):
+            qry_split[i] = qry_split[i].lower()
+        
+        if (qry_split[0] != "select"):
+            print("Error: Incorrect entity query formatting, not starting with SELECT")
+            exit(1)
+        
+        if (qry_split[1] != "distinct"):
+            print("Adding distinct to the entity query " + str(q) +" (0 indexed position)")
+            qry_split.insert(1,"distinct")
+        
+        if (qry_split[3] != "from"):
+            print("Error: Incorrect entity query formatting, FROM not at correct position")
+            exit(1)
+        
+        # We have rigid stop at table name because we are using this structure to extract table name
+        # TODO: Once table name extraction logic is updated this can also be updated 
+        if (qry_split[4][-1] != ";"):
+            print("Error: Incorrect entity query formatting, there should be nothing after table name")
+            exit(1)
+        
+        new_query_list.append(' '.join(qry_split))
+    
+    return new_query_list
 
 def clean_token(token):
     token = str(token)
@@ -173,6 +208,7 @@ def entity_node_to_uuids(cursor, entity_queries_list):
         #print(f'result\n{result}')
 
         # extracting table and column names
+        # TODO: Improve table name extraction logic to better formatting
         table_name = entity_query.split()[-1].rsplit(';')[0]  # table name of the query to execute
         col_name = str(result.columns[0]) # column name of the query
 
@@ -300,7 +336,8 @@ def main():
     edge_entity_feature_val_rel_list = ret_data[6]
 
     # returning both cnx & cursor because cnx is main object deleting it leads to lose of cursor
-    cnx, cursor = connect_to_db(db_server, db_name) 
+    cnx, cursor = connect_to_db(db_server, db_name)
+    entity_queries_list = validation_check_entity_queries(entity_queries_list)
     entity_mapping = entity_node_to_uuids(cursor, entity_queries_list)
     src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
         edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping)  # this is the pd dataframe
