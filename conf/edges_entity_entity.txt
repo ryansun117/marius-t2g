@@ -4,3 +4,65 @@ collected_from
 SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
 SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.country FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.lithology1 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.lithology2 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.formation FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.geological_group FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+collected_from
+SELECT occurrences.taxon_no, collections.member FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+interpretted_as
+SELECT occurrences.taxon_no, collections.environment FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+interpretted_as
+SELECT collections.formation, collections.geological_group FROM collections;
+interpretted_as
+SELECT collections.formation, collections.member FROM collections;
+interpretted_as
+SELECT collections.formation, collections.environment FROM collections;
+assigned_to
+SELECT occurrences.taxon_no, interval_data.interval_no FROM occurrences, collections, interval_data WHERE occurrences.collection_no = collections.collection_no AND collections.max_interval_no = interval_data.interval_no;
+assigned_to
+SELECT collections.formation, collections.geological_group FROM collections, interval_data WHERE collections.max_interval_no = interval_data.interval_no;
+assigned_to
+SELECT collections.formation, collections.member FROM collections, interval_data WHERE collections.max_interval_no = interval_data.interval_no;
+assigned_to
+SELECT collections.formation, interval_data.interval_no FROM collections, interval_data WHERE collections.max_interval_no = interval_data.interval_no;
+located_in
+SELECT collections.formation, collections.country FROM collections;
+located_in
+SELECT collections.formation, collections.state FROM collections;
+located_in
+SELECT collections.formation, collections.county FROM collections;
+located_in
+SELECT collections.geological_group, collections.country FROM collections;
+located_in
+SELECT collections.geological_group, collections.state FROM collections;
+located_in
+SELECT collections.geological_group, collections.county FROM collections;
+located_in
+SELECT collections.member, collections.country FROM collections;
+located_in
+SELECT collections.member, collections.state FROM collections;
+located_in
+SELECT collections.member, collections.county FROM collections;
+consist_of
+SELECT collections.formation, collections.geological_group FROM collections;
+consist_of
+SELECT collections.formation, collections.member FROM collections;
+consist_of
+SELECT collections.formation, collections.lithology1 FROM collections;
+consist_of
+SELECT collections.formation, collections.geological_group FROM collections;
+consist_of
+SELECT collections.formation, collections.member FROM collections;
+consist_of
+SELECT collections.formation, collections.lithology2 FROM collections;

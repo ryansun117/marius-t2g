@@ -127,7 +127,7 @@ def connect_to_db(db_server, db_name):
     if db_server == 'maria-db':
         try:
             cnx = mysql.connector.connect(user='root',
-                                        password='mohil123',  # change password to your own
+                                        password='123456@Sun',  # change password to your own
                                         host='127.0.0.1',
                                         database=db_name)
             cursor = cnx.cursor()
