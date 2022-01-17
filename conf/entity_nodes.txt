@@ -1,4 +1,4 @@
-SELECT distinct taxon_no FROM occurrences;
-SELECT distinct country FROM collections;
-SELECT distinct state FROM collections;
-SELECT distinct county FROM collections;
+SELECT distinct occurrences.taxon_no FROM occurrences;
+SELECT distinct collections.country FROM collections;
+SELECT distinct collections.state FROM collections;
+SELECT distinct collections.county FROM collections;

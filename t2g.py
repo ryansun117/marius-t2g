@@ -150,7 +150,7 @@ def validation_check_entity_queries(entity_query_list):
     :param entity_query_list: List of entity queries and each will be checked and validated
     :return updated_queries: List of new queries with necessary updates
     """
-    # Assuming formating as SELECT DISTINCT ____ FROM ____;
+    # Assuming formating as SELECT DISTINCT table_name.col_name FROM ____ WHERE ____;
     new_query_list = list()
     for q in range(len(entity_query_list)):
         qry_split = entity_query_list[q].split(' ')
@@ -165,15 +165,20 @@ def validation_check_entity_queries(entity_query_list):
             print("Adding distinct to the entity query " + str(q) +" (0 indexed position)")
             qry_split.insert(1,"distinct")
         
+        check_split = qry_split[2].split('.')
+        if (len(check_split) != 2):
+            print("Error: Incorrect entity query formatting, table_name.col_name should in the SELECT line")
+            exit(1) 
+        
         if (qry_split[3] != "from"):
             print("Error: Incorrect entity query formatting, FROM not at correct position")
             exit(1)
         
-        # We have rigid stop at table name because we are using this structure to extract table name
-        # TODO: Once table name extraction logic is updated this can also be updated 
-        if (qry_split[4][-1] != ";"):
-            print("Error: Incorrect entity query formatting, there should be nothing after table name")
-            exit(1)
+        # # We have rigid stop at table name because we are using this structure to extract table name
+        # # Update: Table name extraction logic updated so no longer need this check 
+        # if (qry_split[4][-1] != ";"):
+        #     print("Error: Incorrect entity query formatting, there should be nothing after table name")
+        #     exit(1)
         
         new_query_list.append(' '.join(qry_split))
     
@@ -209,8 +214,8 @@ def entity_node_to_uuids(cursor, entity_queries_list):
 
         # extracting table and column names
         # TODO: Improve table name extraction logic to better formatting
-        table_name = entity_query.split()[-1].rsplit(';')[0]  # table name of the query to execute
-        col_name = str(result.columns[0]) # column name of the query
+        table_name = entity_query.split()[2].split('.')[0]  # table name of the query to execute
+        col_name = str(entity_query.split()[2].split('.')[1]) # column name of the query
 
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)] # cleaning invalid entries
 
