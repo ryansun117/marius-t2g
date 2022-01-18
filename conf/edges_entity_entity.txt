@@ -5,12 +5,6 @@ SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHE
 collected_from
 SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
-SELECT occurrences.taxon_no, collections.country FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
-collected_from
-SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
-collected_from
-SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
-collected_from
 SELECT occurrences.taxon_no, collections.lithology1 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
 SELECT occurrences.taxon_no, collections.lithology2 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
