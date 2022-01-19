@@ -331,6 +331,7 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
     # These are just for metrics
     num_uniq = []  # number of entities
     num_edge_type = []  # number of edges
+    none_count = 0 # For debugging
 
     # edges from entity node to entity node processing
     for i in range(len(edge_entity_entity_queries_list)):
@@ -367,6 +368,16 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
             result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
             result.at[index, 'dst'] = entity_mapping.get(result.at[index, 'dst'])
 
+            if (result.at[index, 'src'] is None):
+                print("None: returned by entity_mapping src at query (entity-entity edges) position "
+                    + str(i)+" and result index " + str(index))
+                none_count = none_count+1
+            
+            if (result.at[index, 'dst'] is None):
+                print("None: returned by entity_mapping dst at query (entity-entity edges) position "
+                    + str(i)+" and result index " + str(index))
+                none_count = none_count+1
+
         src_rel_dst = pd.concat([src_rel_dst, result])
     
     # edges from entity node to feature values processing
@@ -401,9 +412,15 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
         for index, row in result.iterrows():
             # gets the UUID for the specific entity node from the entity_mapping
             result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
+            
+            if (result.at[index, 'src'] is None):
+                print("None: returned by entity_mapping src at query (entity-feature edges) position "
+                    + str(i)+" and result index " + str(index))
+                none_count = none_count+1
 
         src_rel_dst = pd.concat([src_rel_dst, result])
 
+    print(f'None Count is {none_count}. If not 0 there is some issue as entity mapping does not have some entities')
     print(f'src_rel_dst\n{src_rel_dst}\n')
     src_rel_dst.to_csv(output_dir / Path("all_edges(t2g).txt"), sep='\t', header=False, index=False)  # write to txt
     return src_rel_dst  # returns a dataframe or whatever format Marius wants
