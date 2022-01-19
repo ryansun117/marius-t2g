@@ -292,7 +292,9 @@ def entity_node_to_uuids(cursor, entity_queries_list):
         table_name = entity_query.split()[2].split('.')[0]  # table name of the query to execute
         col_name = str(entity_query.split()[2].split('.')[1]) # column name of the query
 
+        result = result.applymap(clean_token)  # strip tokens and lower case strings
         result = result[~result.iloc[:, 0].isin(INVALID_ENTRY_LIST)] # cleaning invalid entries
+        # maybe re-index once here?
 
         # concatenate each entity node with its respective table nam
         result[result.columns[0]] = table_name + '_' + col_name + '_' + result[result.columns[0]].map(str)
@@ -368,15 +370,15 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
             result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
             result.at[index, 'dst'] = entity_mapping.get(result.at[index, 'dst'])
 
-            if (result.at[index, 'src'] is None):
-                print("None: returned by entity_mapping src at query (entity-entity edges) position "
-                    + str(i)+" and result index " + str(index))
-                none_count = none_count+1
-            
-            if (result.at[index, 'dst'] is None):
-                print("None: returned by entity_mapping dst at query (entity-entity edges) position "
-                    + str(i)+" and result index " + str(index))
-                none_count = none_count+1
+            # if (result.at[index, 'src'] is None):
+            #     print("None: returned by entity_mapping src at query (entity-entity edges) position "
+            #         + str(i)+" and result index " + str(index))
+            #     none_count = none_count+1
+            #
+            # if (result.at[index, 'dst'] is None):
+            #     print("None: returned by entity_mapping dst at query (entity-entity edges) position "
+            #         + str(i)+" and result index " + str(index))
+            #     none_count = none_count+1
 
         src_rel_dst = pd.concat([src_rel_dst, result])
     
@@ -413,14 +415,14 @@ def post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_
             # gets the UUID for the specific entity node from the entity_mapping
             result.at[index, 'src'] = entity_mapping.get(result.at[index, 'src'])
             
-            if (result.at[index, 'src'] is None):
-                print("None: returned by entity_mapping src at query (entity-feature edges) position "
-                    + str(i)+" and result index " + str(index))
-                none_count = none_count+1
+            # if (result.at[index, 'src'] is None):
+            #     print("None: returned by entity_mapping src at query (entity-feature edges) position "
+            #         + str(i)+" and result index " + str(index))
+            #     none_count = none_count+1
 
         src_rel_dst = pd.concat([src_rel_dst, result])
 
-    print(f'None Count is {none_count}. If not 0 there is some issue as entity mapping does not have some entities')
+    # print(f'None Count is {none_count}. If not 0 there is some issue as entity mapping does not have some entities')
     print(f'src_rel_dst\n{src_rel_dst}\n')
     src_rel_dst.to_csv(output_dir / Path("all_edges(t2g).txt"), sep='\t', header=False, index=False)  # write to txt
     return src_rel_dst  # returns a dataframe or whatever format Marius wants
@@ -441,7 +443,7 @@ def main():
     edge_entity_entity_queries_list = validation_check_edge_entity_entity_queries(edge_entity_entity_queries_list)
     edge_entity_feature_val_queries_list = validation_check_edge_entity_feature_val_queries(edge_entity_feature_val_queries_list)
     entity_mapping = entity_node_to_uuids(cursor, entity_queries_list)
-    src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list, 
+    src_rel_dst = post_processing(cursor, edge_entity_entity_queries_list, edge_entity_entity_rel_list,
         edge_entity_feature_val_queries_list, edge_entity_feature_val_rel_list, entity_mapping)  # this is the pd dataframe
     # convert_to_int() should be next, but we are relying on the Marius' preprocessing module
 
