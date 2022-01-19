@@ -5,9 +5,7 @@ SELECT occurrences.taxon_no, collections.state FROM occurrences, collections WHE
 collected_from
 SELECT occurrences.taxon_no, collections.county FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
-SELECT occurrences.taxon_no, collections.lithology1 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
-collected_from
-SELECT occurrences.taxon_no, collections.lithology2 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
+SELECT occurrences.taxon_no, collections.lithology1 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no UNION SELECT occurrences.taxon_no, collections.lithology2 FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
 SELECT occurrences.taxon_no, collections.formation FROM occurrences, collections WHERE occurrences.collection_no = collections.collection_no;
 collected_from
@@ -49,14 +47,8 @@ SELECT collections.member, collections.state FROM collections;
 located_in
 SELECT collections.member, collections.county FROM collections;
 consist_of
-SELECT collections.formation, collections.geological_group FROM collections;
+SELECT collections.formation, collections.geological_group FROM collections UNION SELECT collections.formation, collections.geological_group FROM collections;
 consist_of
-SELECT collections.formation, collections.member FROM collections;
+SELECT collections.formation, collections.member FROM collections UNION SELECT collections.formation, collections.member FROM collections;
 consist_of
-SELECT collections.formation, collections.lithology1 FROM collections;
-consist_of
-SELECT collections.formation, collections.geological_group FROM collections;
-consist_of
-SELECT collections.formation, collections.member FROM collections;
-consist_of
-SELECT collections.formation, collections.lithology2 FROM collections;
+SELECT collections.formation, collections.lithology1 FROM collections UNION SELECT collections.formation, collections.lithology2 FROM collections;
